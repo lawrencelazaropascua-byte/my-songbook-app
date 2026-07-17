@@ -15,98 +15,44 @@
             --top-panel-bg: #1e293b;
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
 
-        body {
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-        }
+        body { background-color: var(--bg-color); color: var(--text-color); display: flex; flex-direction: column; min-height: 100vh; }
 
-        header {
-            background-color: var(--card-bg);
-            border-bottom: 1px solid var(--border-color);
-            padding: 1rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+        header { background-color: var(--card-bg); border-bottom: 1px solid var(--border-color); padding: 1rem; display: flex; justify-content: space-between; align-items: center; }
 
         h1 { font-size: 1.3rem; color: var(--accent-color); }
 
-        .top-control-panel {
-            background-color: var(--top-panel-bg);
-            color: #f8fafc;
-            padding: 1rem;
-            border-bottom: 1px solid #334155;
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
+        .top-control-panel { background-color: var(--top-panel-bg); color: #f8fafc; padding: 1rem; border-bottom: 1px solid #334155; display: flex; flex-direction: column; gap: 1rem; }
 
         .control-row { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; }
         .control-group { display: flex; flex-direction: column; gap: 0.35rem; flex: 1; min-width: 200px; }
-        .control-group label { font-size: 0.75rem; color: #94a3b8; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em; }
+        .control-group label { font-size: 0.75rem; color: #94a3b8; font-weight: bold; text-transform: uppercase; }
         .input-inline-group { display: flex; gap: 0.5rem; width: 100%; }
 
-        button, select, input {
-            padding: 0.5rem 0.75rem;
-            border: 1px solid var(--border-color);
-            background-color: var(--card-bg);
-            border-radius: 0.375rem;
-            font-weight: 500;
-            font-size: 0.9rem;
-        }
+        button, select, input { padding: 0.5rem 0.75rem; border: 1px solid var(--border-color); background-color: var(--card-bg); border-radius: 0.375rem; font-size: 0.9rem; }
+        .top-control-panel input, .top-control-panel select { background-color: #334155; border: 1px solid #475569; color: white; }
 
-        .top-control-panel input, .top-control-panel select {
-            background-color: #334155;
-            border: 1px solid #475569;
-            color: white;
-        }
-
-        .search-btn { background-color: var(--accent-color); color: white; border: none; }
-        .wizard-btn { background-color: #d97706; color: white; border: none; }
-        .primary-btn { background-color: #4f46e5; color: white; border: none; }
+        .search-btn { background-color: var(--accent-color); color: white; border: none; cursor: pointer; }
+        .wizard-btn { background-color: #d97706; color: white; border: none; cursor: pointer; }
+        .primary-btn { background-color: #4f46e5; color: white; border: none; cursor: pointer; }
 
         .main-container { display: flex; flex-direction: column; flex: 1; }
         .editor-pane { background-color: #1e1e1e; border-bottom: 1px solid var(--border-color); }
         .pane-title { padding: 0.5rem 1rem; background-color: #0f172a; color: #94a3b8; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; }
 
-        textarea {
-            width: 100%; height: 250px; padding: 1rem; border: none; resize: vertical;
-            font-family: "Courier New", Courier, monospace; font-size: 1rem;
-            background-color: #1e1e1e; color: #d4d4d4; outline: none;
-        }
+        textarea { width: 100%; height: 250px; padding: 1rem; border: none; resize: vertical; font-family: monospace; font-size: 1rem; background-color: #1e1e1e; color: #d4d4d4; }
 
-        .preview-content { padding: 1.5rem; background-color: var(--card-bg); }
-        .song-title { font-size: 1.8rem; font-weight: 800; color: #0f172a; }
-        .song-line { display: flex; flex-wrap: wrap; margin-bottom: 1rem; line-height: 2.6; }
-        .chord-wrap { position: relative; display: inline-block; margin-right: 0.25rem; }
-        .chord { position: absolute; top: -1.3rem; left: 0; font-weight: bold; color: var(--chord-color); font-size: 0.95rem; white-space: nowrap; }
+        .preview-content { padding: 1.5rem; background-color: var(--card-bg); flex: 1; }
+        .song-line { display: flex; flex-wrap: wrap; margin-bottom: 0.5rem; line-height: 2; }
+        .chord { font-weight: bold; color: var(--chord-color); margin-right: 0.5rem; }
 
-        footer {
-            padding: 1.5rem; text-align: center; font-size: 0.85rem; 
-            color: #64748b; background-color: #f8fafc; border-top: 1px solid var(--border-color);
-        }
+        footer { padding: 1.5rem; text-align: center; font-size: 0.85rem; color: #64748b; background-color: #f8fafc; border-top: 1px solid var(--border-color); }
 
         @media (min-width: 1024px) {
-            /* Changed height to auto and removed overflow hidden to show footer */
-            body { min-height: 100vh; }
             .main-container { flex-direction: row; }
-            .editor-pane, .preview-pane { flex: 1; }
-            .editor-pane { border-right: 1px solid var(--border-color); border-bottom: none; }
+            .editor-pane, .preview-pane { flex: 1; display: flex; flex-direction: column; }
             textarea { height: 600px; resize: none; }
-        }
-
-        @media print {
-            header, .top-control-panel, .editor-pane, .pane-title, footer { display: none !important; }
         }
     </style>
 </head>
@@ -134,10 +80,6 @@
                     <button class="wizard-btn" onclick="autoInjectChordTemplate()">🪄 Inject</button>
                 </div>
             </div>
-            <div class="control-group" style="flex: 0.5;">
-                <label>3. Transpose</label>
-                <select id="transpose" onchange="renderSong()"><option value="0">Original</option></select>
-            </div>
         </div>
     </div>
 
@@ -153,11 +95,44 @@
     </div>
 
     <footer>
-        <p><strong>Disclaimer:</strong> All lyrics are the property of their respective owners.</p>
+        <p>All lyrics are the property of their respective owners.</p>
     </footer>
 
     <script>
-        // (Your existing JavaScript remains here)
+        async function searchOnlineSong() {
+            const artist = document.getElementById("search-artist").value.trim();
+            const title = document.getElementById("search-title").value.trim();
+            const editor = document.getElementById("chordpro-input");
+            if (!title) return alert("Enter a title");
+            
+            editor.value = "# Searching...";
+            try {
+                const res = await fetch(`https://lrclib.net/api/search?q=${encodeURIComponent(artist + " " + title)}`);
+                const data = await res.json();
+                if (data.length > 0) {
+                    editor.value = `{title: ${data[0].trackName}}\n{artist: ${data[0].artistName}}\n\n${data[0].plainLyrics || ""}`;
+                    renderSong();
+                }
+            } catch (e) { editor.value = "# Error fetching lyrics."; }
+        }
+
+        function renderSong() {
+            const input = document.getElementById("chordpro-input").value;
+            const output = document.getElementById("preview-output");
+            output.innerHTML = input.split("\n").map(line => {
+                if (line.startsWith("{")) return "";
+                return `<div class="song-line">${line.replace(/\[([^\]]+)\]/g, '<span class="chord">$1</span>')}</div>`;
+            }).join("");
+        }
+
+        function autoInjectChordTemplate() {
+            const editor = document.getElementById("chordpro-input");
+            const chords = document.getElementById("chord-progression").value.split(",");
+            editor.value = editor.value.split("\n").map((line, i) => 
+                (line.trim() && !line.startsWith("[")) ? `[${chords[i % chords.length]}] ${line}` : line
+            ).join("\n");
+            renderSong();
+        }
     </script>
 </body>
 </html>
