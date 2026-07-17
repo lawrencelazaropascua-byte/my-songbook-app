@@ -1,118 +1,432 @@
-import React, { useState, useEffect } from 'react';
-import YouTube from 'react-youtube';
-import { initializeApp } from "firebase/app";
-import { getDatabase, ref, onValue, push, remove } from "firebase/database";
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate Songbook Compiler & Auto-Chord Engine</title>
+    <style>
+        :root {
+            --bg-color: #f1f5f9;
+            --card-bg: #ffffff;
+            --text-color: #1e293b;
+            --accent-color: #0f766e;
+            --chord-color: #be123c;
+            --border-color: #cbd5e1;
+            --top-panel-bg: #1e293b;
+        }
 
-// 1. Firebase Config
-const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  databaseURL: "YOUR_DATABASE_URL",
-  projectId: "YOUR_PROJECT_ID",
-};
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
 
-export default function KaraokeApp() {
-  const [queue, setQueue] = useState([]);
-  const [currentSong, setCurrentSong] = useState(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState([]);
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
 
-  // 2. Sync Queue from Firebase
-  useEffect(() => {
-    const queueRef = ref(db, 'karaoke/queue');
-    onValue(queueRef, (snapshot) => {
-      const data = snapshot.val();
-      const list = data ? Object.entries(data).map(([id, val]) => ({ id, ...val })) : [];
-      setQueue(list);
-    });
-  }, []);
+        header {
+            background-color: var(--card-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+        }
 
-  // 3. YouTube Search Function
-  const handleSearch = async (e) => {
-    e.preventDefault();
-    const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=5&q=${searchQuery} karaoke&key=YOUR_YT_API_KEY`;
-    const response = await fetch(url);
-    const data = await response.json();
-    setSearchResults(data.items.map(item => ({
-      title: item.snippet.title,
-      videoId: item.id.videoId
-    })));
-  };
+        h1 {
+            font-size: 1.3rem;
+            color: var(--accent-color);
+        }
 
-  const addToQueue = (song) => {
-    push(ref(db, 'karaoke/queue'), song);
-    setSearchResults([]);
-    setSearchQuery("");
-  };
+        .top-control-panel {
+            background-color: var(--top-panel-bg);
+            color: #f8fafc;
+            padding: 1rem;
+            border-bottom: 1px solid #334155;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
 
-  const playNext = () => {
-    if (queue.length > 0) {
-      setCurrentSong(queue[0]);
-      remove(ref(db, `karaoke/queue/${queue[0].id}`));
-    } else {
-      setCurrentSong(null);
-    }
-  };
+        .control-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            align-items: center;
+        }
 
-  return (
-    <div className="min-h-screen bg-gray-900 text-white p-4 md:p-8 font-sans">
-      <h1 className="text-4xl font-bold text-center text-purple-500 mb-8">Karaoke Night</h1>
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            flex: 1;
+            min-width: 200px;
+        }
 
-      <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
+        .control-group label {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .input-inline-group {
+            display: flex;
+            gap: 0.5rem;
+            width: 100%;
+        }
+
+        button, select, input {
+            padding: 0.5rem 0.75rem;
+            border: 1px solid var(--border-color);
+            background-color: var(--card-bg);
+            border-radius: 0.375rem;
+            font-weight: 500;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .top-control-panel input, 
+        .top-control-panel select {
+            background-color: #334155;
+            border: 1px solid #475569;
+            color: white;
+        }
+
+        .top-control-panel input::placeholder {
+            color: #94a3b8;
+        }
+
+        button {
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        button:hover {
+            background-color: #f8fafc;
+            border-color: #94a3b8;
+        }
+
+        .search-btn { background-color: var(--accent-color); color: white; border: none; }
+        .wizard-btn { background-color: #d97706; color: white; border: none; }
+        .primary-btn { background-color: #4f46e5; color: white; border: none; }
+
+        .disclaimer-box {
+            background-color: #fffbeb;
+            border: 1px solid #f59e0b;
+            color: #92400e;
+            padding: 10px;
+            font-size: 0.75rem;
+            margin: 10px;
+            border-radius: 4px;
+        }
+
+        .main-container {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+
+        .editor-pane, .preview-pane {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .editor-pane {
+            background-color: #1e1e1e;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .pane-title {
+            padding: 0.5rem 1rem;
+            background-color: #0f172a;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #94a3b8;
+        }
+
+        textarea {
+            width: 100%;
+            flex-grow: 1;
+            padding: 1rem;
+            border: none;
+            resize: vertical;
+            font-family: "Courier New", Courier, monospace;
+            font-size: 1rem;
+            line-height: 1.5;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            outline: none;
+        }
+
+        .preview-content {
+            padding: 1.5rem;
+            background-color: var(--card-bg);
+        }
+
+        .song-title { font-size: 1.8rem; font-weight: 800; margin-bottom: 0.25rem; color: #0f172a; }
+        .song-meta { font-style: italic; color: #64748b; margin-bottom: 1.5rem; font-size: 0.95rem; }
+        .song-line { display: flex; flex-wrap: wrap; margin-bottom: 1rem; line-height: 2.6; }
+        .chord-wrap { position: relative; display: inline-block; margin-right: 0.25rem; }
         
-        {/* Player Section */}
-        <div className="lg:col-span-2">
-          <div className="aspect-video bg-black rounded-xl overflow-hidden border-4 border-gray-800 shadow-2xl">
-            {currentSong ? (
-              <YouTube 
-                videoId={currentSong.videoId} 
-                opts={{ width: '100%', height: '100%', playerVars: { autoplay: 1 } }}
-                onEnd={playNext}
-              />
-            ) : (
-              <div className="h-full flex items-center justify-center text-gray-500">Waiting for song...</div>
-            )}
-          </div>
-          <button onClick={playNext} className="mt-4 w-full bg-purple-600 hover:bg-purple-700 p-4 rounded-lg font-bold transition">
-            Skip / Play Next
-          </button>
-        </div>
+        .chord {
+            position: absolute;
+            top: -1.3rem;
+            left: 0;
+            font-weight: bold;
+            color: var(--chord-color);
+            font-family: "Courier New", Courier, monospace;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
 
-        {/* Sidebar: Search & Queue */}
-        <div className="space-y-6">
-          <form onSubmit={handleSearch} className="flex gap-2">
-            <input 
-              className="flex-1 p-2 rounded bg-gray-800 border border-gray-700 text-white"
-              placeholder="Search songs..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            <button className="bg-blue-600 px-4 py-2 rounded">Search</button>
-          </form>
+        .lyrics { white-space: pre; font-size: 1rem; color: var(--text-color); }
 
-          {/* Results List */}
-          {searchResults.length > 0 && (
-            <div className="bg-gray-800 p-4 rounded-lg">
-              {searchResults.map(song => (
-                <button key={song.videoId} onClick={() => addToQueue(song)} className="block w-full text-left p-2 hover:bg-gray-700 text-sm truncate">
-                  {song.title}
-                </button>
-              ))}
+        @media (min-width: 1024px) {
+            body { height: 100vh; overflow: hidden; }
+            .main-container { flex-direction: row; overflow: hidden; }
+            .editor-pane, .preview-pane { flex: 1; height: 100%; overflow: hidden; }
+            .editor-pane { border-right: 1px solid var(--border-color); border-bottom: none; }
+            textarea { height: 100%; resize: none; }
+            .preview-content { overflow-y: auto; height: 100%; padding: 2.5rem; }
+        }
+
+        @media print {
+            header, .top-control-panel, .pane-title, .disclaimer-box { display: none !important; }
+            .main-container, body { height: auto; overflow: visible; background: white; }
+            .preview-pane { width: 100%; overflow: visible; }
+            .preview-content { padding: 0; overflow: visible; }
+            .song-line { page-break-inside: avoid; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>📖 Auto-Chord Engine</h1>
+        <button class="primary-btn" onclick="window.print()">🖨️ Print / PDF</button>
+    </header>
+
+    <div class="top-control-panel">
+        <div class="control-row">
+            <div class="control-group" style="flex: 2;">
+                <label>1. Fetch Lyrics Online</label>
+                <form class="input-inline-group" onsubmit="event.preventDefault(); searchOnlineSong();">
+                    <input type="text" id="search-artist" placeholder="Artist Name (Optional)" style="width: 40%;">
+                    <input type="text" id="search-title" placeholder="Song Title" style="width: 40%;">
+                    <button type="submit" class="search-btn">🔍 Search</button>
+                </form>
             </div>
-          )}
-
-          {/* Queue List */}
-          <div className="bg-gray-800 p-4 rounded-lg min-h-[200px]">
-            <h2 className="text-lg font-bold mb-4 border-b border-gray-700 pb-2">Upcoming</h2>
-            {queue.map((song) => (
-              <div key={song.id} className="p-2 mb-2 bg-gray-900 rounded text-xs border-l-4 border-purple-500">
-                {song.title}
-              </div>
-            ))}
-          </div>
+            <div class="control-group" style="flex: 1.5;">
+                <label>2. Auto-Chord Injector</label>
+                <div class="input-inline-group">
+                    <select id="chord-progression" style="width: 65%;">
+                        <option value="C,G,Am,F">Pop (C - G - Am - F)</option>
+                        <option value="G,D,Em,C">Rock (G - D - Em - C)</option>
+                        <option value="Am,F,C,G">Minor Pop (Am - F - C - G)</option>
+                        <option value="A,D,E,D">Blues/Rock (A - D - E - D)</option>
+                    </select>
+                    <button class="wizard-btn" onclick="autoInjectChordTemplate()">🪄 Inject</button>
+                </div>
+            </div>
+            <div class="control-group" style="flex: 0.5; min-width: 120px;">
+                <label>3. Transpose Key</label>
+                <select id="transpose" onchange="renderSong()">
+                    <option value="0">Original</option>
+                    <option value="1">+1 Semitone</option>
+                    <option value="2">+2 Semitones</option>
+                    <option value="3">+3 Semitones</option>
+                    <option value="4">+4 Semitones</option>
+                    <option value="5">+5 Semitones</option>
+                    <option value="-1">-1 Semitone</option>
+                    <option value="-2">-2 Semitones</option>
+                    <option value="-3">-3 Semitones</option>
+                    <option value="-4">-4 Semitones</option>
+                    <option value="-5">-5 Semitones</option>
+                </select>
+            </div>
+            <div class="control-group" style="flex: 1;">
+                <label>Presets</label>
+                <select id="song-presets" onchange="loadPresetSong()">
+                    <option value="0">Amazing Grace (Demo)</option>
+                </select>
+            </div>
         </div>
-      </div>
     </div>
-  );
-}
+
+    <div class="main-container">
+        <div class="editor-pane">
+            <div class="pane-title">ChordPro Editor (Type brackets here)</div>
+            <textarea id="chordpro-input" oninput="renderSong()" placeholder="Search a song above, then hit Inject Template!"></textarea>
+            
+            <div class="disclaimer-box">
+                All lyrics provided on this website are the property of their respective owners and are intended for educational and personal use only.
+            </div>
+        </div>
+
+        <div class="preview-pane">
+            <div class="pane-title">Compiled Song Output</div>
+            <div class="preview-content" id="preview-output"></div>
+        </div>
+    </div>
+
+    <script>
+        const localSongs = [{ title: "Amazing Grace", artist: "Traditional", chordpro: "{title: Amazing Grace}\n{artist: Traditional}\n\n[G]Amazing grace! How [C]sweet the [G]sound\nThat saved a wretch like [D]me!" }];
+        const scale = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+        const flatMap = { "Db": "C#", "Eb": "D#", "Gb": "F#", "Ab": "G#", "Bb": "A#" };
+
+        function autoInjectChordTemplate() {
+            const editor = document.getElementById("chordpro-input");
+            const progressionStr = document.getElementById("chord-progression").value;
+            const chords = progressionStr.split(",");
+            let lines = editor.value.split("\n");
+            let chordIndex = 0;
+            let outputLines = [];
+
+            lines.forEach(line => {
+                let trimmed = line.trim();
+                if (trimmed.startsWith("{") || trimmed.startsWith("#") || trimmed === "") {
+                    outputLines.push(line);
+                    return;
+                }
+                if (trimmed.includes("[") && trimmed.includes("]")) {
+                    outputLines.push(line);
+                    return;
+                }
+                let words = trimmed.split(" ");
+                if (words.length > 0 && words[0] !== "") {
+                    words[0] = `[${chords[chordIndex % chords.length]}]` + words[0];
+                    chordIndex++;
+                    if (words.length > 4) {
+                        let midPoint = Math.floor(words.length / 2);
+                        words[midPoint] = `[${chords[chordIndex % chords.length]}]` + words[midPoint];
+                        chordIndex++;
+                    }
+                    outputLines.push(words.join(" "));
+                } else {
+                    outputLines.push(line);
+                }
+            });
+            editor.value = outputLines.join("\n");
+            renderSong();
+        }
+
+        async function searchOnlineSong() {
+            const artistInput = document.getElementById("search-artist");
+            const titleInput = document.getElementById("search-title");
+            const editor = document.getElementById("chordpro-input");
+            let artist = artistInput.value.trim();
+            let title = titleInput.value.trim();
+            if (!title) { alert("Please enter a Song Title."); return; }
+            editor.value = "# Querying global databases... Please hold.";
+            renderSong();
+            try {
+                let searchQuery = encodeURIComponent(title);
+                if (artist) searchQuery += `%20${encodeURIComponent(artist)}`;
+                const response = await fetch(`https://lrclib.net/api/search?q=${searchQuery}`);
+                const searchResults = await response.json();
+                if (searchResults && searchResults.length > 0) {
+                    const match = searchResults[0];
+                    let songLyrics = match.plainLyrics || (match.syncedLyrics ? match.syncedLyrics.replace(/\[\d{2}:\d{2}\.\d{2}\]/g, "").trim() : "");
+                    if (songLyrics) {
+                        artistInput.value = match.artistName;
+                        titleInput.value = match.trackName;
+                        editor.value = `{title: ${match.trackName}}\n{artist: ${match.artistName}}\n\n` + songLyrics;
+                        renderSong();
+                        return;
+                    }
+                }
+                throw new Error();
+            } catch (e) {
+                alert("Search Notice: Could not find matching lyrics. Opening blank workspace.");
+                editor.value = `{title: ${title}}\n{artist: ${artist || "Unknown"}}\n\n`;
+                renderSong();
+            }
+        }
+
+        function transposeChord(chord, semitones) {
+            if (semitones === 0) return chord;
+            return chord.replace(/[A-G][b#]?/g, (match) => {
+                let normalized = flatMap[match] || match;
+                let index = scale.indexOf(normalized);
+                if (index === -1) return match;
+                let newIndex = (index + semitones) % 12;
+                if (newIndex < 0) newIndex += 12;
+                return scale[newIndex];
+            });
+        }
+
+        function setupPresetDropdown() {
+            const select = document.getElementById("song-presets");
+            localSongs.forEach((song, idx) => {
+                const opt = document.createElement("option");
+                opt.value = idx;
+                opt.textContent = `${song.title} (${song.artist})`;
+                select.appendChild(opt);
+            });
+            document.getElementById("chordpro-input").value = localSongs[0].chordpro;
+            renderSong();
+        }
+
+        function loadPresetSong() {
+            const index = document.getElementById("song-presets").value;
+            document.getElementById("chordpro-input").value = localSongs[index].chordpro;
+            renderSong();
+        }
+
+        function renderSong() {
+            const input = document.getElementById("chordpro-input").value;
+            const outputElement = document.getElementById("preview-output");
+            const transposeValue = parseInt(document.getElementById("transpose").value, 10);
+            const lines = input.split("\n");
+            let htmlOutput = "";
+            let meta = { title: "Untitled", artist: "" };
+            lines.forEach(line => {
+                line = line.trim();
+                if (line.startsWith("{") && line.endsWith("}")) {
+                    const directive = line.slice(1, -1);
+                    const colonIndex = directive.indexOf(":");
+                    if (colonIndex !== -1) {
+                        const key = directive.substring(0, colonIndex).trim().toLowerCase();
+                        const value = directive.substring(colonIndex + 1).trim();
+                        if (key === "title" || key === "t") meta.title = value;
+                        if (key === "artist" || key === "a") meta.artist = value;
+                    }
+                    return;
+                }
+                if (line === "" || line.startsWith("#")) { htmlOutput += "<br>"; return; }
+                let lineHtml = '<div class="song-line">';
+                let regex = /(\[[^\]]+\])?([^\[]*)/g;
+                let match;
+                while ((match = regex.exec(line)) !== null && match[0] !== "") {
+                    let chord = match[1] ? match[1].slice(1, -1) : "";
+                    let text = match[2] || "";
+                    if (chord) {
+                        chord = transposeChord(chord, transposeValue);
+                        lineHtml += `<span class="chord-wrap"><span class="chord">${chord}</span><span class="lyrics">${text || " "}</span></span>`;
+                    } else if (text) {
+                        lineHtml += `<span class="lyrics">${text}</span>`;
+                    }
+                }
+                lineHtml += '</div>';
+                htmlOutput += lineHtml;
+            });
+            outputElement.innerHTML = `<h2 class="song-title">${meta.title}</h2>` + (meta.artist ? `<div class="song-meta">by ${meta.artist}</div>` : "") + htmlOutput;
+        }
+
+        window.onload = setupPresetDropdown;
+    </script>
+</body>
+</html>
+
