@@ -225,14 +225,14 @@
     <div class="top-control-panel">
         <div class="control-row">
             
-            <!-- Panel Group 1: Lyric Fetcher -->
+            <!-- Panel Group 1: Lyric Fetcher wrapped inside an interactive form context -->
             <div class="control-group" style="flex: 2;">
                 <label>1. Fetch Lyrics Online</label>
-                <div class="input-inline-group">
+                <form class="input-inline-group" onsubmit="event.preventDefault(); searchOnlineSong();">
                     <input type="text" id="search-artist" placeholder="Artist Name (Optional)" style="width: 40%;">
                     <input type="text" id="search-title" placeholder="Song Title" style="width: 40%;">
-                    <button class="search-btn" onclick="searchOnlineSong()">🔍 Search</button>
-                </div>
+                    <button type="submit" class="search-btn">🔍 Search</button>
+                </form>
             </div>
 
             <!-- Panel Group 2: Progression Injector -->
