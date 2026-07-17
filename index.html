@@ -1,70 +1,118 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Karaoke Performance Engine</title>
-    <style>
-        body { background: #000; color: #fff; font-family: sans-serif; text-align: center; margin: 0; }
-        .performance-area { height: 70vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
-        
-        #lyrics-display { font-size: 3.5rem; font-weight: 900; line-height: 1.4; }
-        .word { transition: color 0.1s; color: #555; }
-        .highlight { color: #facc15; text-shadow: 0 0 15px #facc15; }
-        
-        .controls { position: fixed; bottom: 0; width: 100%; background: #111; padding: 20px; border-top: 2px solid #333; }
-        .disclaimer { font-size: 0.7rem; color: #444; margin-top: 10px; }
-    </style>
-</head>
-<body>
+import React, { useState, useEffect } from 'react';
+import YouTube from 'react-youtube';
+import { initializeApp } from "firebase/app";
+import { getDatabase, ref, onValue, push, remove } from "firebase/database";
 
-    <div class="performance-area">
-        <div id="lyrics-display">Upload a track and press Start!</div>
-    </div>
+// 1. Firebase Config
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  databaseURL: "YOUR_DATABASE_URL",
+  projectId: "YOUR_PROJECT_ID",
+};
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
 
-    <div class="controls">
-        <input type="file" id="audio-upload" accept="audio/*">
-        <audio id="audio-player" controls></audio>
-        <button onclick="startPerformance()">🎤 START PERFORMANCE</button>
-        <div class="disclaimer">
-            All lyrics provided on this website are the property of their respective owners and are intended for educational and personal use only.
+export default function KaraokeApp() {
+  const [queue, setQueue] = useState([]);
+  const [currentSong, setCurrentSong] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+
+  // 2. Sync Queue from Firebase
+  useEffect(() => {
+    const queueRef = ref(db, 'karaoke/queue');
+    onValue(queueRef, (snapshot) => {
+      const data = snapshot.val();
+      const list = data ? Object.entries(data).map(([id, val]) => ({ id, ...val })) : [];
+      setQueue(list);
+    });
+  }, []);
+
+  // 3. YouTube Search Function
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=5&q=${searchQuery} karaoke&key=YOUR_YT_API_KEY`;
+    const response = await fetch(url);
+    const data = await response.json();
+    setSearchResults(data.items.map(item => ({
+      title: item.snippet.title,
+      videoId: item.id.videoId
+    })));
+  };
+
+  const addToQueue = (song) => {
+    push(ref(db, 'karaoke/queue'), song);
+    setSearchResults([]);
+    setSearchQuery("");
+  };
+
+  const playNext = () => {
+    if (queue.length > 0) {
+      setCurrentSong(queue[0]);
+      remove(ref(db, `karaoke/queue/${queue[0].id}`));
+    } else {
+      setCurrentSong(null);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-900 text-white p-4 md:p-8 font-sans">
+      <h1 className="text-4xl font-bold text-center text-purple-500 mb-8">Karaoke Night</h1>
+
+      <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        {/* Player Section */}
+        <div className="lg:col-span-2">
+          <div className="aspect-video bg-black rounded-xl overflow-hidden border-4 border-gray-800 shadow-2xl">
+            {currentSong ? (
+              <YouTube 
+                videoId={currentSong.videoId} 
+                opts={{ width: '100%', height: '100%', playerVars: { autoplay: 1 } }}
+                onEnd={playNext}
+              />
+            ) : (
+              <div className="h-full flex items-center justify-center text-gray-500">Waiting for song...</div>
+            )}
+          </div>
+          <button onClick={playNext} className="mt-4 w-full bg-purple-600 hover:bg-purple-700 p-4 rounded-lg font-bold transition">
+            Skip / Play Next
+          </button>
         </div>
+
+        {/* Sidebar: Search & Queue */}
+        <div className="space-y-6">
+          <form onSubmit={handleSearch} className="flex gap-2">
+            <input 
+              className="flex-1 p-2 rounded bg-gray-800 border border-gray-700 text-white"
+              placeholder="Search songs..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            <button className="bg-blue-600 px-4 py-2 rounded">Search</button>
+          </form>
+
+          {/* Results List */}
+          {searchResults.length > 0 && (
+            <div className="bg-gray-800 p-4 rounded-lg">
+              {searchResults.map(song => (
+                <button key={song.videoId} onClick={() => addToQueue(song)} className="block w-full text-left p-2 hover:bg-gray-700 text-sm truncate">
+                  {song.title}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Queue List */}
+          <div className="bg-gray-800 p-4 rounded-lg min-h-[200px]">
+            <h2 className="text-lg font-bold mb-4 border-b border-gray-700 pb-2">Upcoming</h2>
+            {queue.map((song) => (
+              <div key={song.id} className="p-2 mb-2 bg-gray-900 rounded text-xs border-l-4 border-purple-500">
+                {song.title}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
-
-    <script>
-        const audioPlayer = document.getElementById('audio-player');
-        const lyricsDisplay = document.getElementById('lyrics-display');
-
-        // You can edit this array to add your own song lyrics and timestamps
-        const songData = [
-            { time: 0.5, text: "Amazing" }, { time: 1.5, text: "grace" },
-            { time: 2.2, text: "how" }, { time: 2.8, text: "sweet" },
-            { time: 3.5, text: "the" }, { time: 4.2, text: "sound" }
-        ];
-
-        document.getElementById('audio-upload').onchange = (e) => {
-            audioPlayer.src = URL.createObjectURL(e.target.files[0]);
-        };
-
-        function startPerformance() {
-            lyricsDisplay.innerHTML = "";
-            songData.forEach((item, index) => {
-                const span = document.createElement('span');
-                span.className = 'word';
-                span.id = 'word-' + index;
-                span.innerText = item.text + " ";
-                lyricsDisplay.appendChild(span);
-            });
-            
-            audioPlayer.play();
-            
-            audioPlayer.ontimeupdate = () => {
-                songData.forEach((item, index) => {
-                    if (audioPlayer.currentTime >= item.time) {
-                        document.getElementById('word-' + index).classList.add('highlight');
-                    }
-                });
-            };
-        }
-    </script>
-</body>
-</html>
+  );
+}
