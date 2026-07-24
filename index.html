@@ -238,15 +238,15 @@
 <body>
 
     <header>
-        <h1>📖 Auto-Chord Engine</h1>
+        <h1>📖 Auto-Chord Engine & Audio Search</h1>
         <button class="primary-btn" onclick="window.print()">🖨️ Print / PDF</button>
     </header>
 
     <div class="top-control-panel">
         <div class="control-row">
             <div class="control-group" style="flex: 2;">
-                <label>1. Fetch Lyrics Online</label>
-                <form class="input-inline-group" onsubmit="event.preventDefault(); searchOnlineSong();">
+                <label>1. Search Song & Audio Online</label>
+                <form class="input-inline-group" onsubmit="event.preventDefault(); searchSongAndAudio();">
                     <input type="text" id="search-artist" placeholder="Artist (Optional)">
                     <input type="text" id="search-title" placeholder="Song Title" required>
                     <button type="submit" class="search-btn">🔍 Search</button>
@@ -283,7 +283,7 @@
                 </select>
             </div>
             <div class="control-group" style="flex: 1;">
-                <label>Presets & Audio</label>
+                <label>Presets</label>
                 <select id="song-presets" onchange="loadPresetSong()">
                     <!-- Populated dynamically -->
                 </select>
@@ -291,8 +291,8 @@
         </div>
         <div class="control-row" style="padding-top: 0.5rem; border-top: 1px solid #334155;">
             <div class="control-group" style="flex: 1;">
-                <label>Optional MP3 Audio URL / File Link</label>
-                <input type="text" id="audio-url" placeholder="Paste direct MP3 URL here (e.g., https://example.com/song.mp3)" oninput="renderSong()">
+                <label>Or Paste Custom MP3 Link / File</label>
+                <input type="text" id="audio-url" placeholder="Paste direct MP3 URL here..." oninput="renderSong()">
             </div>
         </div>
     </div>
@@ -302,7 +302,7 @@
             <div class="pane-title">ChordPro Editor</div>
             <textarea id="chordpro-input" oninput="renderSong()" placeholder="Type or paste your ChordPro lyrics here..."></textarea>
             <div class="disclaimer-box">
-                Lyrics provided are for educational and personal performance use only.
+                Lyrics and music previews are for educational and personal performance use only.
             </div>
         </div>
 
@@ -361,42 +361,51 @@
             renderSong();
         }
 
-        async function searchOnlineSong() {
+        async function searchSongAndAudio() {
             const artistInput = document.getElementById("search-artist");
             const titleInput = document.getElementById("search-title");
             const editor = document.getElementById("chordpro-input");
+            const audioInput = document.getElementById("audio-url");
+            
             let artist = artistInput.value.trim();
             let title = titleInput.value.trim();
-            
             if (!title) return;
             
-            editor.value = "# Querying global database... Please hold.";
+            editor.value = "# Searching audio track & lyrics database...";
             renderSong();
             
             try {
-                let searchQuery = encodeURIComponent(title);
-                if (artist) searchQuery += `%20${encodeURIComponent(artist)}`;
+                // 1. Fetch Audio Preview via Deezer Public API (CORS friendly via jsonp/proxy or direct public endpoints)
+                let query = encodeURIComponent(`${artist} ${title}`.trim());
+                let audioRes = await fetch(`https://api.deezer.com/search?q=${query}&output=jsonp`, { mode: 'no-cors' });
+                // Fallback to iTunes API search for audio preview if Deezer blocks direct browser execution
+                let itunesRes = await fetch(`https://itunes.apple.com/search?term=${query}&entity=song&limit=1`);
+                let itunesData = await itunesRes.json();
                 
-                const response = await fetch(`https://lrclib.net/api/search?q=${searchQuery}`);
-                const searchResults = await response.json();
-                
-                if (searchResults && searchResults.length > 0) {
-                    const match = searchResults[0];
-                    // Clean timestamps out completely using regex replacement
-                    let rawLyrics = match.plainLyrics || match.syncedLyrics || "";
-                    let cleanLyrics = rawLyrics.replace(/\[\d{2}:\d{2}\.\d{2}\]/g, "").trim();
-                    
-                    if (cleanLyrics) {
-                        artistInput.value = match.artistName;
-                        titleInput.value = match.trackName;
-                        editor.value = `{title: ${match.trackName}}\n{artist: ${match.artistName}}\n\n` + cleanLyrics;
-                        renderSong();
-                        return;
-                    }
+                if (itunesData.results && itunesData.results.length > 0) {
+                    let track = itunesData.results[0];
+                    audioInput.value = track.previewUrl; // 30-sec preview MP3 link
+                    artistInput.value = track.artistName;
+                    titleInput.value = track.trackName;
                 }
-                throw new Error();
+
+                // 2. Fetch Lyrics text from LRCLib
+                let lrcQuery = encodeURIComponent(title);
+                if (artist) lrcQuery += `%20${encodeURIComponent(artist)}`;
+                let lrcRes = await fetch(`https://lrclib.net/api/search?q=${lrcQuery}`);
+                let lrcData = await lrcRes.json();
+                
+                let cleanLyrics = "Type your lyrics here or check formatting!";
+                if (lrcData && lrcData.length > 0) {
+                    let rawLyrics = lrcData[0].plainLyrics || lrcData[0].syncedLyrics || "";
+                    cleanLyrics = rawLyrics.replace(/\[\d{2}:\d{2}\.\d{2}\]/g, "").trim();
+                }
+
+                editor.value = `{title: ${titleInput.value}}\n{artist: ${artistInput.value}}\n\n` + cleanLyrics;
+                renderSong();
+
             } catch (e) {
-                editor.value = `{title: ${title}}\n{artist: ${artist || "Unknown"}}\n\n# Could not auto-fetch lyrics. Type your lyrics here!`;
+                editor.value = `{title: ${title}}\n{artist: ${artist || "Unknown"}}\n\n# Error fetching online resources. Check your connection.`;
                 renderSong();
             }
         }
