@@ -184,17 +184,17 @@
 
         .song-title { font-size: 2rem; font-weight: 800; margin-bottom: 0.25rem; color: #0f172a; }
         .song-meta { font-style: italic; color: #64748b; margin-bottom: 2rem; font-size: 1rem; }
-        .song-line { display: flex; flex-wrap: wrap; margin-bottom: 1.25rem; line-height: 2.8; }
-        .chord-wrap { position: relative; display: inline-block; margin-right: 0.35rem; }
+        .song-line { display: flex; flex-wrap: wrap; margin-bottom: 1.5rem; line-height: 3; align-items: flex-end; }
+        .chord-wrap { position: relative; display: inline-block; margin-right: 0.4rem; }
         
         .chord {
             position: absolute;
-            top: -1.4rem;
+            top: -1.5rem;
             left: 0;
             font-weight: bold;
             color: var(--chord-color);
             font-family: "Courier New", Courier, monospace;
-            font-size: 0.9rem;
+            font-size: 0.95rem;
             white-space: nowrap;
         }
 
@@ -415,9 +415,9 @@
             let meta = { title: "Untitled Song", artist: "Unknown Artist" };
             
             lines.forEach(line => {
-                line = line.trim();
-                if (line.startsWith("{") && line.endsWith("}")) {
-                    const directive = line.slice(1, -1);
+                let trimmedLine = line.trim();
+                if (trimmedLine.startsWith("{") && trimmedLine.endsWith("}")) {
+                    const directive = trimmedLine.slice(1, -1);
                     const colonIndex = directive.indexOf(":");
                     if (colonIndex !== -1) {
                         const key = directive.substring(0, colonIndex).trim().toLowerCase();
@@ -428,26 +428,37 @@
                     return;
                 }
                 
-                if (line === "" || line.startsWith("#")) {
+                if (trimmedLine === "" || trimmedLine.startsWith("#")) {
                     htmlOutput += '<div style="height: 1rem;"></div>';
                     return;
                 }
                 
                 let lineHtml = '<div class="song-line">';
-                let regex = /(\[[^\]]+\])?([^\[]*)/g;
+                // Fixed regex to match optional leading text, then alternating chords and lyrics chunks
+                const regex = /([^\[]*)(?:\[([^\]]+)\]([^\[]*))?/g;
                 let match;
-                
-                while ((match = regex.exec(line)) !== null && match[0] !== "") {
-                    let chord = match[1] ? match[1].slice(1, -1) : "";
-                    let text = match[2] || "";
-                    
-                    if (chord) {
-                        chord = transposeChord(chord, transposeValue);
-                        lineHtml += `<span class="chord-wrap"><span class="chord">${chord}</span><span class="lyrics">${text || " "}</span></span>`;
-                    } else if (text) {
-                        lineHtml += `<span class="lyrics">${text}</span>`;
-                    }
+                let hasContent = false;
+
+                // Handle text before the first chord if any
+                let firstBracket = line.indexOf('[');
+                if (firstBracket > 0) {
+                    let leadingText = line.substring(0, firstBracket);
+                    lineHtml += `<span class="lyrics">${leadingText}</span>`;
+                    line = line.substring(firstBracket);
                 }
+
+                let chordRegex = /\[([^\]]+)\]([^\[]*)/g;
+                while ((match = chordRegex.exec(line)) !== null) {
+                    hasContent = true;
+                    let chord = transposeChord(match[1], transposeValue);
+                    let text = match[2] || "";
+                    lineHtml += `<span class="chord-wrap"><span class="chord">${chord}</span><span class="lyrics">${text}</span></span>`;
+                }
+
+                if (!hasContent) {
+                    lineHtml += `<span class="lyrics">${line}</span>`;
+                }
+
                 lineHtml += '</div>';
                 htmlOutput += lineHtml;
             });
