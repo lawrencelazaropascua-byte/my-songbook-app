@@ -289,7 +289,6 @@
                 </select>
             </div>
         </div>
-        <!-- Optional MP3 link custom row -->
         <div class="control-row" style="padding-top: 0.5rem; border-top: 1px solid #334155;">
             <div class="control-group" style="flex: 1;">
                 <label>Optional MP3 Audio URL / File Link</label>
@@ -383,11 +382,14 @@
                 
                 if (searchResults && searchResults.length > 0) {
                     const match = searchResults[0];
-                    let songLyrics = match.plainLyrics || (match.syncedLyrics ? match.syncedLyrics.replace(/\[\d{2}:\d{2}\.\d{2}\]/g, "").trim() : "");
-                    if (songLyrics) {
+                    // Clean timestamps out completely using regex replacement
+                    let rawLyrics = match.plainLyrics || match.syncedLyrics || "";
+                    let cleanLyrics = rawLyrics.replace(/\[\d{2}:\d{2}\.\d{2}\]/g, "").trim();
+                    
+                    if (cleanLyrics) {
                         artistInput.value = match.artistName;
                         titleInput.value = match.trackName;
-                        editor.value = `{title: ${match.trackName}}\n{artist: ${match.artistName}}\n\n` + songLyrics;
+                        editor.value = `{title: ${match.trackName}}\n{artist: ${match.artistName}}\n\n` + cleanLyrics;
                         renderSong();
                         return;
                     }
@@ -488,7 +490,6 @@
                 htmlOutput += lineHtml;
             });
 
-            // Build Header layout with optional audio player
             let audioPlayerHtml = audioSrc ? `<audio controls src="${audioSrc}"></audio>` : '';
             let headerHtml = `
                 <div class="song-header-area">
