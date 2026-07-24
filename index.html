@@ -68,8 +68,7 @@
             display: flex;
             flex-direction: column;
             gap: 0.4rem;
-            flex: 1;
-            min-width: 220px;
+            flex: 1 1 220px;
         }
 
         .control-group label {
@@ -82,8 +81,14 @@
 
         .input-inline-group {
             display: flex;
+            flex-wrap: wrap;
             gap: 0.5rem;
             width: 100%;
+        }
+
+        .input-inline-group input, 
+        .input-inline-group select {
+            flex: 1 1 120px;
         }
 
         button, select, input {
@@ -167,6 +172,7 @@
             background-color: #1e1e1e;
             color: #d4d4d4;
             outline: none;
+            min-height: 250px;
         }
 
         .disclaimer-box {
@@ -199,6 +205,7 @@
         audio {
             height: 36px;
             outline: none;
+            max-width: 100%;
         }
 
         .song-line { display: flex; flex-wrap: wrap; margin-bottom: 1.5rem; line-height: 3; align-items: flex-end; }
@@ -375,21 +382,17 @@
             renderSong();
             
             try {
-                // 1. Fetch Audio Preview via Deezer Public API (CORS friendly via jsonp/proxy or direct public endpoints)
                 let query = encodeURIComponent(`${artist} ${title}`.trim());
-                let audioRes = await fetch(`https://api.deezer.com/search?q=${query}&output=jsonp`, { mode: 'no-cors' });
-                // Fallback to iTunes API search for audio preview if Deezer blocks direct browser execution
                 let itunesRes = await fetch(`https://itunes.apple.com/search?term=${query}&entity=song&limit=1`);
                 let itunesData = await itunesRes.json();
                 
                 if (itunesData.results && itunesData.results.length > 0) {
                     let track = itunesData.results[0];
-                    audioInput.value = track.previewUrl; // 30-sec preview MP3 link
+                    audioInput.value = track.previewUrl; 
                     artistInput.value = track.artistName;
                     titleInput.value = track.trackName;
                 }
 
-                // 2. Fetch Lyrics text from LRCLib
                 let lrcQuery = encodeURIComponent(title);
                 if (artist) lrcQuery += `%20${encodeURIComponent(artist)}`;
                 let lrcRes = await fetch(`https://lrclib.net/api/search?q=${lrcQuery}`);
