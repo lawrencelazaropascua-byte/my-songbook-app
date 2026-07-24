@@ -182,8 +182,25 @@
             background-color: var(--card-bg);
         }
 
-        .song-title { font-size: 2rem; font-weight: 800; margin-bottom: 0.25rem; color: #0f172a; }
-        .song-meta { font-style: italic; color: #64748b; margin-bottom: 2rem; font-size: 1rem; }
+        .song-header-area {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 1rem;
+        }
+
+        .song-title { font-size: 2rem; font-weight: 800; color: #0f172a; margin-bottom: 0.25rem; }
+        .song-meta { font-style: italic; color: #64748b; font-size: 1rem; }
+        
+        audio {
+            height: 36px;
+            outline: none;
+        }
+
         .song-line { display: flex; flex-wrap: wrap; margin-bottom: 1.5rem; line-height: 3; align-items: flex-end; }
         .chord-wrap { position: relative; display: inline-block; margin-right: 0.4rem; }
         
@@ -210,7 +227,7 @@
         }
 
         @media print {
-            header, .top-control-panel, .pane-title, .disclaimer-box { display: none !important; }
+            header, .top-control-panel, .pane-title, .disclaimer-box, audio { display: none !important; }
             .main-container, body { height: auto; overflow: visible; background: white; }
             .preview-pane { width: 100%; overflow: visible; }
             .preview-content { padding: 0; overflow: visible; }
@@ -266,10 +283,17 @@
                 </select>
             </div>
             <div class="control-group" style="flex: 1;">
-                <label>Presets</label>
+                <label>Presets & Audio</label>
                 <select id="song-presets" onchange="loadPresetSong()">
                     <!-- Populated dynamically -->
                 </select>
+            </div>
+        </div>
+        <!-- Optional MP3 link custom row -->
+        <div class="control-row" style="padding-top: 0.5rem; border-top: 1px solid #334155;">
+            <div class="control-group" style="flex: 1;">
+                <label>Optional MP3 Audio URL / File Link</label>
+                <input type="text" id="audio-url" placeholder="Paste direct MP3 URL here (e.g., https://example.com/song.mp3)" oninput="renderSong()">
             </div>
         </div>
     </div>
@@ -294,6 +318,7 @@
             { 
                 title: "Amazing Grace", 
                 artist: "Traditional", 
+                audio: "",
                 chordpro: "{title: Amazing Grace}\n{artist: Traditional}\n\n[G]Amazing grace! How [C]sweet the [G]sound\nThat saved a wretch like [D]me!\nI [G]once was lost, but [C]now am [G]found,\nWas blind, but [D]now I [G]see." 
             }
         ];
@@ -396,17 +421,20 @@
                 select.appendChild(opt);
             });
             document.getElementById("chordpro-input").value = localSongs[0].chordpro;
+            document.getElementById("audio-url").value = localSongs[0].audio || "";
             renderSong();
         }
 
         function loadPresetSong() {
             const index = document.getElementById("song-presets").value;
             document.getElementById("chordpro-input").value = localSongs[index].chordpro;
+            document.getElementById("audio-url").value = localSongs[index].audio || "";
             renderSong();
         }
 
         function renderSong() {
             const input = document.getElementById("chordpro-input").value;
+            const audioSrc = document.getElementById("audio-url").value.trim();
             const outputElement = document.getElementById("preview-output");
             const transposeValue = parseInt(document.getElementById("transpose").value, 10);
             const lines = input.split("\n");
@@ -434,12 +462,6 @@
                 }
                 
                 let lineHtml = '<div class="song-line">';
-                // Fixed regex to match optional leading text, then alternating chords and lyrics chunks
-                const regex = /([^\[]*)(?:\[([^\]]+)\]([^\[]*))?/g;
-                let match;
-                let hasContent = false;
-
-                // Handle text before the first chord if any
                 let firstBracket = line.indexOf('[');
                 if (firstBracket > 0) {
                     let leadingText = line.substring(0, firstBracket);
@@ -448,6 +470,9 @@
                 }
 
                 let chordRegex = /\[([^\]]+)\]([^\[]*)/g;
+                let match;
+                let hasContent = false;
+
                 while ((match = chordRegex.exec(line)) !== null) {
                     hasContent = true;
                     let chord = transposeChord(match[1], transposeValue);
@@ -462,8 +487,20 @@
                 lineHtml += '</div>';
                 htmlOutput += lineHtml;
             });
+
+            // Build Header layout with optional audio player
+            let audioPlayerHtml = audioSrc ? `<audio controls src="${audioSrc}"></audio>` : '';
+            let headerHtml = `
+                <div class="song-header-area">
+                    <div>
+                        <h2 class="song-title">${meta.title}</h2>
+                        ${meta.artist ? `<div class="song-meta">by ${meta.artist}</div>` : ''}
+                    </div>
+                    ${audioPlayerHtml}
+                </div>
+            `;
             
-            outputElement.innerHTML = `<h2 class="song-title">${meta.title}</h2>` + (meta.artist ? `<div class="song-meta">by ${meta.artist}</div>` : "") + htmlOutput;
+            outputElement.innerHTML = headerHtml + htmlOutput;
         }
 
         window.onload = setupPresetDropdown;
